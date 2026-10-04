@@ -224,4 +224,3 @@ calc();render();intro();
 </script>
 </body>
 </html>
-
