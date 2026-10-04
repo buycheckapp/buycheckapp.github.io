@@ -157,4 +157,71 @@ function calc(){
   $("pin").style.left=Math.max(0,Math.min(100,(dscr-0.8)/1.2*100))+"%";
   $("mult").textContent=mult?mult.toFixed(2)+"x":"n/a";
   $("rmult").textContent=rev>0?(price/rev).toFix
-
+a";
+  $("dp").textContent=usd(dp);$("loan").textContent=usd(loan);$("pmt").textContent=usd(pmt);$("ads").textContent=usd(ads);
+  $("dscr").textContent=ads>0?dscr.toFixed(2):"n/a";$("left").textContent=usd(left);
+  $("coc").textContent=dp>0?(coc*100).toFixed(0)+"%":"n/a";
+  cur={price,sde,mult,dscr,t,cls,inputs:{price:n("price"),rev,sde,sal,down:n("down"),rate:n("rate"),term:yrs}};
+}
+let deals=[];
+try{deals=JSON.parse(localStorage.getItem("deals")||"[]")}catch(e){deals=[]}
+function store(){try{localStorage.setItem("deals",JSON.stringify(deals))}catch(e){}}
+function render(){
+  $("badge").textContent=deals.length||"";const el=$("list");el.textContent="";
+  if(!deals.length){const p=document.createElement("p");p.className="note";p.textContent="No saved deals yet. Save one to compare it with the next listing.";el.appendChild(p);return}
+  deals.slice().sort((a,b)=>b.dscr-a.dscr).forEach(d=>{
+    const row=document.createElement("div");row.className="deal";
+    const info=document.createElement("div");
+    const b=document.createElement("b");b.textContent=d.name;
+    const s=document.createElement("small");s.textContent=usd(d.price)+" · "+d.mult.toFixed(1)+"x · coverage "+d.dscr.toFixed(2)+" · "+d.t;
+    info.append(b,s);
+    const load=document.createElement("button");load.className="x";load.textContent="Load";
+    load.onclick=()=>{Object.keys(d.inputs).forEach(k=>$(k==="term"?"term":k).value=d.inputs[k]);calc();closeD();scrollTo({top:0,behavior:"smooth"})};
+    const del=document.createElement("button");del.className="x";del.textContent="Delete";
+    del.onclick=()=>{deals=deals.filter(x=>x!==d);store();render()};
+    const ak=document.createElement("button");ak.className="x";ak.textContent="Ask";ak.onclick=()=>{openD("chat");send("Break down "+d.name)};const act=document.createElement("div");act.className="row";act.append(ak,load,del);
+    row.append(info,act);el.appendChild(row);
+  });
+}
+document.querySelectorAll("input").forEach(i=>i.addEventListener("input",calc));
+$("save").onclick=()=>{
+  const nm=$("name").value.trim()||"Deal "+(deals.length+1);
+  deals.push({name:nm,price:cur.price,mult:cur.mult,dscr:cur.dscr,t:cur.t,inputs:cur.inputs});
+  store();render();$("name").value="";$("msg").textContent="Saved \""+nm+"\". Open the menu to see it or ask the analyst.";
+};
+const pc=v=>(v*100).toFixed(0)+"%";
+function M(i){const price=i.price,sde=i.sde,sal=i.sal,dn=i.down/100,r=i.rate/1200,k=i.term*12;const loan=price*(1-dn),pmt=k<=0?0:(r===0?loan/k:loan*r/(1-Math.pow(1+r,-k)));const ads=pmt*12,avail=sde-sal,dp=price*dn;return{i,price,rev:i.rev,sde,sal,dp,loan,pmt,ads,avail,dscr:ads>0?avail/ads:0,mult:sde>0?price/sde:0,left:avail-ads,coc:dp>0?(avail-ads)/dp:0,margin:i.rev>0?sde/i.rev:0}}
+const D=d=>M(d.inputs);
+function fairPrice(m){const i=m.i,r=i.rate/1200,k=i.term*12;const f=k<=0?0:(r===0?1/k:r/(1-Math.pow(1+r,-k)));if(!f||m.avail<=0||i.down>=100)return 0;return (m.avail/1.25/12)/f/(1-i.down/100)}
+function V(m){if(m.sde<=0||m.price<=0)return"Incomplete";if(m.dscr>=1.5&&m.mult<=3.5)return"Strong deal";if(m.dscr>=1.25&&m.mult<=4.5)return"Decent, check the details";if(m.dscr>=1)return"Risky";return"Pass or renegotiate"}
+function risk(m){if(m.dscr<1)return"payments are higher than cash flow after your salary.";if(m.mult>4.5)return"you are paying a high multiple, so there is little room for error.";if(m.rev>0&&m.margin<.1)return"thin margins leave little cushion if revenue dips.";return"owner dependence and customer concentration. The numbers cannot show these, so ask the seller directly."}
+function brk(d){const m=D(d),fp=fairPrice(m);let t=d.name+": "+V(m)+"\nPrice "+usd(m.price)+" for "+usd(m.sde)+" cash flow is "+m.mult.toFixed(2)+"x.\nLoan "+usd(m.loan)+", about "+usd(m.pmt)+" a month. Coverage "+m.dscr.toFixed(2)+".\nAfter the loan and your salary you keep about "+usd(m.left)+" a year ("+pc(m.coc)+" on your "+usd(m.dp)+" down).\n";if(m.rev>0)t+="Margin: "+pc(m.margin)+" of revenue.\n";t+="Main risk: "+risk(m)+"\n";t+=m.dscr<1.25&&fp>0?"A price near "+usd(fp)+" gets coverage to 1.25.":"Price already clears 1.25 coverage.";return t}
+function reply(q){const s=q.toLowerCase();
+if(/(what is|what's|explain|mean).*(dscr|coverage)/.test(s))return"DSCR is cash flow left after your salary divided by yearly loan payments. Lenders usually want 1.25 or higher. Below 1.0 the business cannot cover the loan.";
+if(/(what is|what's|explain|mean).*(sde|multiple)/.test(s))return"SDE is the owner's yearly profit before their salary. The multiple is price divided by SDE. Small businesses often sell for about 2x to 4x.";
+if(/^(hi|hello|hey|help)/.test(s))return"Ask me to break down your deals, rank them, suggest offer prices, or flag risks. You can also name a saved deal.";
+if(!deals.length)return"Save a deal first using Save this deal on the main screen. Then I can break it down, rank it, or suggest a price to offer.";
+const named=deals.find(d=>s.includes(d.name.toLowerCase()));if(named)return brk(named);
+const rk=deals.slice().sort((a,b)=>D(b).dscr-D(a).dscr);
+if(/break|each|\ball\b|analy|summar/.test(s))return rk.map(brk).join("\n\n");
+if(/best|top|rank|compare|which|strongest/.test(s))return"Ranked by debt coverage:\n"+rk.map((d,n)=>(n+1)+". "+d.name+": "+D(d).dscr.toFixed(2)+" coverage, "+D(d).mult.toFixed(1)+"x, "+V(D(d))).join("\n");
+if(/worst|avoid|weak/.test(s)){const w=rk[rk.length-1];return"Weakest on coverage is "+w.name+".\n\n"+brk(w)}
+if(/negotiat|offer|price|pay/.test(s))return rk.map(d=>{const m=D(d);return d.name+": "+(m.dscr>=1.25?"already clears 1.25 coverage at "+usd(m.price):"try about "+usd(fairPrice(m))+" instead of "+usd(m.price))}).join("\n");
+if(/risk|worry|red flag/.test(s))return rk.map(d=>d.name+": "+risk(D(d))).join("\n");
+return"I can break down each deal, rank them, suggest offer prices, or flag risks. Try one of the buttons above."}
+function say(t,u){const e=document.createElement("div");e.className="m"+(u?" u":"");e.textContent=t;const b=$("chat");b.appendChild(e);b.scrollTop=b.scrollHeight}
+function send(t){t=t.trim();if(!t)return;say(t,1);say(reply(t))}
+function intro(){say("I am BuyCheck's built-in analyst. I work from the deals you save and use fixed rules, so I am not a live AI. Ask me to break down your deals, rank them, suggest offer prices, or flag risks.")}
+function setTab(n){["deals","chat"].forEach(x=>{$("p-"+x).classList.toggle("on",x===n);$("t-"+x).classList.toggle("on",x===n)})}
+function openD(n){setTab(n||"deals");$("drawer").classList.add("on");$("scrim").classList.add("on")}
+function closeD(){$("drawer").classList.remove("on");$("scrim").classList.remove("on")}
+$("menu").onclick=()=>openD();$("scrim").onclick=closeD;$("close").onclick=closeD;
+$("t-deals").onclick=()=>setTab("deals");$("t-chat").onclick=()=>setTab("chat");
+document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>send(c.dataset.q));
+$("send").onclick=()=>{send($("q").value);$("q").value=""};
+$("q").addEventListener("keydown",e=>{if(e.key==="Enter"){send($("q").value);$("q").value=""}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeD()});
+calc();render();intro();
+</script>
+</body>
+</html>
