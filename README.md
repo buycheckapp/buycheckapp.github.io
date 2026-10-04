@@ -1,4 +1,4 @@
-
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -156,8 +156,7 @@ function calc(){
   $("vcard").className="card verdict "+cls;$("vt").textContent=t;$("vd").textContent=d;
   $("pin").style.left=Math.max(0,Math.min(100,(dscr-0.8)/1.2*100))+"%";
   $("mult").textContent=mult?mult.toFixed(2)+"x":"n/a";
-  $("rmult").textContent=rev>0?(price/rev).toFix
-a";
+  $("rmult").textContent=rev>0?(price/rev).toFixed(2)+"x":"n/a";
   $("dp").textContent=usd(dp);$("loan").textContent=usd(loan);$("pmt").textContent=usd(pmt);$("ads").textContent=usd(ads);
   $("dscr").textContent=ads>0?dscr.toFixed(2):"n/a";$("left").textContent=usd(left);
   $("coc").textContent=dp>0?(coc*100).toFixed(0)+"%":"n/a";
@@ -225,3 +224,4 @@ calc();render();intro();
 </script>
 </body>
 </html>
+
