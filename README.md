@@ -1,4 +1,3 @@
-# buycheckapp.github.io
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -14,7 +13,7 @@
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
 main{max-width:560px;margin:0 auto;padding:20px 16px 48px}
-h1{font:700 26px/1.15 Georgia,"Times New Roman",serif;margin:8px 0 6px}
+h1{font:700 34px/1.1 Georgia,"Times New Roman",serif;margin:8px 0 6px}
 .sub{color:var(--mute);margin:0 0 18px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
 h2{font-size:15px;margin:0 0 12px}
@@ -40,13 +39,33 @@ button{font:inherit;font-weight:600;border:0;border-radius:8px;padding:11px 16px
 .deal{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--line)}
 .deal b{display:block}.deal small{color:var(--mute)}
 .x{background:transparent;color:var(--mute);padding:6px 10px;border:1px solid var(--line)}
-p{margin:0 0 12px;font-size:14px;color:var(--mute)}h2+p{margin-top:0}.note{font-size:12px;color:var(--mute)}
+p{margin:0 0 12px;font-size:14px;color:var(--mute)}h2+p{margin-top:0}.top{display:flex;margin-bottom:6px}
+.menu{position:relative;width:44px;height:44px;padding:0;display:grid;place-items:center;background:var(--card);border:1px solid var(--line)}
+:root:root button.menu,:root:root button.chip,:root:root button.tab{color:var(--ink)}
+:root:root button.x{color:var(--mute)}
+.bd{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;border-radius:9px;background:var(--ink);color:var(--bg);font-size:11px;line-height:18px;text-align:center}.bd:empty{display:none}
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:opacity .2s;z-index:20}.scrim.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;bottom:0;left:0;width:min(90vw,400px);background:var(--bg);border-right:1px solid var(--line);transform:translateX(-100%);transition:transform .25s;z-index:21;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0px) + 14px) 14px calc(env(safe-area-inset-bottom,0px) + 14px)}
+.drawer.on{transform:none}
+.dh{display:flex;justify-content:space-between;align-items:center}.dh b{font:700 20px Georgia,serif}
+.tabs{display:flex;gap:6px;margin:12px 0}
+.tab{flex:1;background:transparent;border:1px solid var(--line)}.tab.on{border-color:var(--acc);box-shadow:inset 0 -3px 0 var(--acc)}
+.pane{display:none;flex:1;min-height:0;flex-direction:column}.pane.on{display:flex}
+#list{overflow-y:auto;flex:1}
+#chat{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:4px 0}
+.m{max-width:92%;padding:9px 12px;border-radius:12px;font-size:14px;white-space:pre-wrap;background:var(--card);border:1px solid var(--line);color:var(--ink);align-self:flex-start}
+.m.u{align-self:flex-end;background:var(--bg);border-color:var(--acc)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.chip{font-size:13px;padding:7px 10px;background:transparent;border:1px solid var(--line);border-radius:16px;font-weight:500}
+.deal{flex-wrap:wrap}
+.note{font-size:12px;color:var(--mute)}
 </style>
 </head>
 <body>
 <main>
-<h1>BuyCheck: Business Acquisition Calculator</h1>
-<p class="sub">Is this small business worth buying? Enter the numbers from any listing to get the SDE multiple, loan payment, debt coverage ratio, and a verdict.</p>
+<header class="top"><button class="menu" id="menu" aria-label="Open menu"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="bd" id="badge"></span></button></header>
+<h1>BuyCheck</h1>
+<p class="sub">Business acquisition calculator. Enter a listing's numbers and get a buy or pass verdict.</p>
 
 <section class="card">
 <h2>The listing</h2>
@@ -92,7 +111,7 @@ p{margin:0 0 12px;font-size:14px;color:var(--mute)}h2+p{margin-top:0}.note{font-
 <section class="card">
 <h2>Save this deal</h2>
 <div class="row"><input id="name" type="text" placeholder="Name it, like Tampa laundromat" maxlength="40"><button id="save">Save deal</button></div>
-<div id="list"></div>
+<p class="note" id="msg">Your saved deals and the analyst chat are in the menu, top left.</p>
 </section>
 
 <section class="card">
@@ -106,6 +125,17 @@ p{margin:0 0 12px;font-size:14px;color:var(--mute)}h2+p{margin-top:0}.note{font-
 
 <p class="note">Estimates only, not financial advice. Verify the seller's numbers with a CPA and talk to a lender before making an offer. Saved deals stay in this browser on this device.</p>
 </main>
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-label="Menu">
+<div class="dh"><b>BuyCheck</b><button class="x" id="close" aria-label="Close menu">Close</button></div>
+<div class="tabs"><button class="tab on" id="t-deals">Saved deals</button><button class="tab" id="t-chat">Analyst</button></div>
+<div class="pane on" id="p-deals"><div id="list"></div></div>
+<div class="pane" id="p-chat">
+<div id="chat"></div>
+<div class="chips"><button class="chip" data-q="Break down each deal">Break down each deal</button><button class="chip" data-q="Which is best?">Which is best?</button><button class="chip" data-q="What price should I offer?">Offer prices</button><button class="chip" data-q="Biggest risks?">Biggest risks</button></div>
+<div class="row"><input id="q" type="text" placeholder="Ask about your deals" maxlength="200"><button id="send">Send</button></div>
+</div>
+</aside>
 <script>
 const $=id=>document.getElementById(id);
 const n=id=>parseFloat($(id).value)||0;
@@ -126,39 +156,5 @@ function calc(){
   $("vcard").className="card verdict "+cls;$("vt").textContent=t;$("vd").textContent=d;
   $("pin").style.left=Math.max(0,Math.min(100,(dscr-0.8)/1.2*100))+"%";
   $("mult").textContent=mult?mult.toFixed(2)+"x":"n/a";
-  $("rmult").textContent=rev>0?(price/rev).toFixed(2)+"x":"n/a";
-  $("dp").textContent=usd(dp);$("loan").textContent=usd(loan);$("pmt").textContent=usd(pmt);$("ads").textContent=usd(ads);
-  $("dscr").textContent=ads>0?dscr.toFixed(2):"n/a";$("left").textContent=usd(left);
-  $("coc").textContent=dp>0?(coc*100).toFixed(0)+"%":"n/a";
-  cur={price,sde,mult,dscr,t,cls,inputs:{price:n("price"),rev,sde,sal,down:n("down"),rate:n("rate"),term:yrs}};
-}
-let deals=[];
-try{deals=JSON.parse(localStorage.getItem("deals")||"[]")}catch(e){deals=[]}
-function store(){try{localStorage.setItem("deals",JSON.stringify(deals))}catch(e){}}
-function render(){
-  const el=$("list");el.textContent="";
-  if(!deals.length){const p=document.createElement("p");p.className="note";p.textContent="No saved deals yet. Save one to compare it with the next listing.";el.appendChild(p);return}
-  deals.slice().sort((a,b)=>b.dscr-a.dscr).forEach(d=>{
-    const row=document.createElement("div");row.className="deal";
-    const info=document.createElement("div");
-    const b=document.createElement("b");b.textContent=d.name;
-    const s=document.createElement("small");s.textContent=usd(d.price)+" · "+d.mult.toFixed(1)+"x · coverage "+d.dscr.toFixed(2)+" · "+d.t;
-    info.append(b,s);
-    const load=document.createElement("button");load.className="x";load.textContent="Load";
-    load.onclick=()=>{Object.keys(d.inputs).forEach(k=>$(k).value=d.inputs[k]);calc();scrollTo({top:0,behavior:"smooth"})};
-    const del=document.createElement("button");del.className="x";del.textContent="Delete";
-    del.onclick=()=>{deals=deals.filter(x=>x!==d);store();render()};
-    const act=document.createElement("div");act.className="row";act.append(load,del);
-    row.append(info,act);el.appendChild(row);
-  });
-}
-document.querySelectorAll("input").forEach(i=>i.addEventListener("input",calc));
-$("save").onclick=()=>{
-  const nm=$("name").value.trim()||"Deal "+(deals.length+1);
-  deals.push({name:nm,price:cur.price,mult:cur.mult,dscr:cur.dscr,t:cur.t,inputs:cur.inputs});
-  store();render();$("name").value="";
-};
-calc();render();
-</script>
-</body>
-</html>
+  $("rmult").textContent=rev>0?(price/rev).toFix
+
